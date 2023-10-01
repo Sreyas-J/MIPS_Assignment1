@@ -47,7 +47,8 @@ loop1end: move $t2,$t8
 #The below function adds 10 to the numbers. You have to replace this with
 #your code
 li $t4,0
-subi $t5,$t1,1
+#subi $t5,$t1,1
+move $t5,$t1
 li $s2,4
 
 loopcopy:  beq $t4,$t5,loopcopyend
@@ -55,16 +56,16 @@ loopcopy:  beq $t4,$t5,loopcopyend
            add $t7,$t2,$s3
            lw $t6,0($t7)
            add $t7,$t3,$s3
-           sw $t6,($t7)
+           sw $t6,0($t7)
            addi $t4,$t4,1
-
+	   j loopcopy
 loopcopyend:
 addi $s5,$0,1
 
 loopa: beq $s5,$t1,loopaend
-     addi $s6,$0,1
-     sub $s7,$t1,$s5
-     loopb: beq $s6,$s7,loopbend
+      addi $s6,$0,1
+      sub $s7,$t1,$s5
+      loopb:beq $s6,$s7,loopbend
      	    mul $s3,$s6,$s2
      	    add $t7,$t3,$s3
      	    lw  $s1,0($t7)
@@ -82,10 +83,16 @@ loopa: beq $s5,$t1,loopaend
      	    addi $s3,$s3,4
      	    add $t7,$t3,$s3
             sw $s1,0($t7)
+            #addi $s6,$s6,1
+            #j loopb
      	    cond: addi $s6,$s6,1
+     	    	  j loopb
+     	    
      loopbend:  addi $s5,$s5,1
-
+     		j loopa
+     
 loopaend: 
+
 
 #endfunction
 #############################################################
