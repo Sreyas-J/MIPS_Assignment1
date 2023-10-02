@@ -99,6 +99,9 @@ variables={
     "$s6":decimal_to_binary(22,5),
     "$s7":decimal_to_binary(23,5),
 
+    "$t8":decimal_to_binary(24,5),
+    "$t9":decimal_to_binary(25,5),
+
     "$ra":decimal_to_binary(31,5)
 }
 
@@ -141,16 +144,12 @@ for j in range(len(lines)):
                 data.append(instructions["addi"]+variables[var[1]]+variables[var[0]]+decimal_to_binary(int(var[2]),16))
 
             if words[i]=="j":
-                #print(words[i+1],jHelper(words[i+1]+":"))
+                print(words[i+1],jHelper(words[i+1]+":"))
                 data.append(instructions["j"]+decimal_to_binary(instructions_begining+jHelper(words[i+1]+":"),26))
 
             if words[i]=="sub":
                 var=words[i+1].split(",")
                 data.append(instructions["sub"]+variables[var[2]]+variables[var[1]]+variables[var[0]]+"00000"+"100010")
-
-            # if words[i]=="subi":
-            #     var=words[i+1].split(",")
-            #     data.append(instructions["addi"]+variables[var[1]]+variables[var[0]]+decimal_to_binary(int(var[2]),16))
 
             if words[i]=="bgt":
                 var=words[i+1].split(",")

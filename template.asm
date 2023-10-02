@@ -66,7 +66,7 @@ addi $s5,$0,1
 loopa: beq $s5,$t9,loopaend
       addi $s6,$0,1
       sub $s7,$t9,$s5
-      loopb:beq $s6,$s7,loopbend
+      loopb: beq $s6,$s7,loopbend
      	    mul $s3,$s6,$s2
      	    add $t7,$t3,$s3
      	    lw  $s1,0($t7)
