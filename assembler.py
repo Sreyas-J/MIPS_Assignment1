@@ -2,13 +2,42 @@ import os
 
 file_path = "assembly.txt"
 
+instructions_begining=0
+
 # Open the file in read mode
 with open(file_path, 'r') as file:
     # Read the contents of the file
     file_contents = file.read()
 
 lines=file_contents.split("\n")
-#print(instructions)
+
+pseudoCode={
+    "li":["lui","ori"],
+    "move":["add"],
+    "mul":["mult","mflo"]        
+}
+
+def beqHelper(target,lineNo):
+    shift=0
+    for i in range(lineNo+1,len(lines)):
+        words=lines[i].split()
+        for word in words:
+            if(word=="mul"):
+                shift+=1
+            if(word==target):
+                return i-lineNo+shift
+
+def jHelper(target):
+    shift = 0
+    for i in range(len(lines)):
+        if len(lines[i])==0:
+            shift-=1
+        words = lines[i].split()
+        for word in words:
+            if word in pseudoCode.keys():
+                shift=shift+len(pseudoCode[word])-1
+            if(word==target):
+                return i+shift
 
 def decimal_to_binary(number, num_bits):
     # Convert the decimal number to binary
@@ -23,22 +52,30 @@ def decimal_to_binary(number, num_bits):
     return binary_with_padding
 
 instructions={
+    "li":"li",
+    "move":"move",
     "lui":decimal_to_binary(15,6),
     "ori":decimal_to_binary(13,6),
     "add":decimal_to_binary(0,6),
-    #"beq":decimal_to_binary()
-}
-
-functions={
-    "add":decimal_to_binary(32,6)
+    "beq":decimal_to_binary(4,6),
+    "mult":decimal_to_binary(0,6),
+    "mflo":decimal_to_binary(0,6),
+    "lw":decimal_to_binary(35,6),
+    "sw":decimal_to_binary(43,6),
+    "addi":decimal_to_binary(8,6),
+    "j":decimal_to_binary(2,6),
+    "sub":decimal_to_binary(0,6),
+    "bgt":decimal_to_binary(7,6)
 }
 
 data=[]
 
 variables={
-    "$zero":decimal_to_binary(0,5),
+    "$0":decimal_to_binary(0,5),
+
     "$v0":decimal_to_binary(2,5),
     "$v1":decimal_to_binary(3,5),
+    
     "$a0":decimal_to_binary(4,5),
     "$a1":decimal_to_binary(5,5),
     "$a2":decimal_to_binary(6,5),
@@ -65,22 +102,58 @@ variables={
     "$ra":decimal_to_binary(31,5)
 }
 
-for line in lines:
-    word=line.split()
-    print(word)
-    if(len(word)!=0):
+for j in range(len(lines)):
+    words=lines[j].split()
+    for i in range(len(words)):
+        if words[i] in instructions:
+            if words[i]=="li":
+                var=words[i+1].split(",")
+                data.append(instructions["lui"]+"00000"+variables[var[0]]+decimal_to_binary(0,16))
 
-        if word[0]=="li" or (len(word)>1 and word[1]=="li"):
-            var=word[1].split(",")
-            data.append(instructions["lui"]+"00000"+variables[var[0]]+decimal_to_binary(0,16))
+                data.append(instructions["ori"]+variables[var[0]]+variables[var[0]]+decimal_to_binary(int(var[1]),16))
 
-            data.append(instructions["ori"]+variables[var[0]]+variables[var[0]]+decimal_to_binary(int(var[1]),16))
+            if words[i]=="move":
+                var=words[i+1].split(",")
+                data.append(instructions["add"]+variables["$0"]+variables[var[1]]+variables[var[0]]+"00000"+"010000")
 
-        if word[0]=="move" or (len(word)>1 and word[1]=="move"):
-            var=word[1].split(",")
-            data.append(instructions["add"]+variables["$zero"]+variables[var[1]]+variables[var[0]]+"00000"+functions["add"])
+            if words[i]=="beq":
+                var=words[i+1].split(",")
+                data.append(instructions["beq"]+variables[var[0]]+variables[var[1]]+decimal_to_binary(beqHelper(var[2]+":",j),16))
 
-        #if word[0]=="beq" or (len(word)>1 and word[1]=="beq"):
+            if words[i]=="mul":
+                data.append(instructions["mult"]+variables[var[0]]+variables[var[1]]+"0000000000011000")
+                data.append(instructions["mflo"]+"0000000000"+variables[var[3]]+"00000010010")
+            
+            if words[i]=="add":
+                var=words[i+1].split(",")
+                data.append(instructions["add"]+variables[var[2]]+variables[var[1]]+variables[var[0]]+"00000"+"010000")
 
+            if words[i]=="lw":
+                var=words[i+1].split(",")
+                data.append(instructions["lw"]+variables[var[1][2:-1]]+variables[var[0]]+decimal_to_binary(int(var[1][0:1]),16))
+
+            if words[i]=="sw":
+                var=words[i+1].split(",")
+                data.append(instructions["sw"]+variables[var[1][2:-1]]+variables[var[0]]+decimal_to_binary(int(var[1][0:1]),16))
+                
+            if words[i]=="addi":
+                var=words[i+1].split(",")
+                data.append(instructions["addi"]+variables[var[1]]+variables[var[0]]+decimal_to_binary(int(var[2]),16))
+
+            if words[i]=="j":
+                #print(words[i+1],jHelper(words[i+1]+":"))
+                data.append(instructions["j"]+decimal_to_binary(instructions_begining+jHelper(words[i+1]+":"),26))
+
+            if words[i]=="sub":
+                var=words[i+1].split(",")
+                data.append(instructions["sub"]+variables[var[2]]+variables[var[1]]+variables[var[0]]+"00000"+"100010")
+
+            # if words[i]=="subi":
+            #     var=words[i+1].split(",")
+            #     data.append(instructions["addi"]+variables[var[1]]+variables[var[0]]+decimal_to_binary(int(var[2]),16))
+
+            if words[i]=="bgt":
+                var=words[i+1].split(",")
+                data.append(instructions["bgt"]+variables[var[0]]+variables[var[1]]+decimal_to_binary(beqHelper(var[2]+":",j),16))
 
 print(data)
