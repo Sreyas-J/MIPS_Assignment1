@@ -1,45 +1,18 @@
 import os
 
-file_path = "assembly.txt"
+file_path = "template.asm" #mips code is present here
 
-instructions_begining=0
+instructions_begining=2**20 #start of addresses in data memory, used for jump statement
 
 # Open the file in read mode
 with open(file_path, 'r') as file:
     # Read the contents of the file
     file_contents = file.read()
 
-lines=file_contents.split("\n")
+lines=file_contents.split("\n") #splits mips code into lines
 
-pseudoCode={
-    "li":["lui","ori"],
-    "move":["add"],
-    "mul":["mult","mflo"]        
-}
 
-def beqHelper(target,lineNo):
-    shift=0
-    for i in range(lineNo+1,len(lines)):
-        words=lines[i].split()
-        for word in words:
-            if(word=="mul"):
-                shift+=1
-            if(word==target):
-                return i-lineNo+shift
-
-def jHelper(target):
-    shift = 0
-    for i in range(len(lines)):
-        if len(lines[i])==0:
-            shift-=1
-        words = lines[i].split()
-        for word in words:
-            if word in pseudoCode.keys():
-                shift=shift+len(pseudoCode[word])-1
-            if(word==target):
-                return i+shift
-
-def decimal_to_binary(number, num_bits):
+def decimal_to_binary(number, num_bits):# converts decimal numbers to binary with necessary number of bits
     # Convert the decimal number to binary
     binary_representation = bin(number)[2:]  # Remove '0b' prefix
 
@@ -51,27 +24,37 @@ def decimal_to_binary(number, num_bits):
 
     return binary_with_padding
 
+pseudoCode={
+    "li":["addiu"],
+    "move":["addu"],   
+    "subi":["addi","sub"],
+    "bgt":["slt","bne"]
+} #all the psuedo codes used
+
 instructions={
     "li":"li",
     "move":"move",
-    "lui":decimal_to_binary(15,6),
-    "ori":decimal_to_binary(13,6),
+    "subi":"subi",
+    "bgt":"bgt",
+    "addiu":decimal_to_binary(9,6),
+    "addu":decimal_to_binary(0,6),
     "add":decimal_to_binary(0,6),
     "beq":decimal_to_binary(4,6),
-    "mult":decimal_to_binary(0,6),
-    "mflo":decimal_to_binary(0,6),
+    "mul":decimal_to_binary(28,6),
     "lw":decimal_to_binary(35,6),
     "sw":decimal_to_binary(43,6),
     "addi":decimal_to_binary(8,6),
     "j":decimal_to_binary(2,6),
     "sub":decimal_to_binary(0,6),
-    "bgt":decimal_to_binary(7,6)
-}
+    "slt":decimal_to_binary(0,6),
+    "bne":decimal_to_binary(5,6)
+} #instructions with their opcodes
 
-data=[]
+data=[] #machine code
 
 variables={
     "$0":decimal_to_binary(0,5),
+    "$1":decimal_to_binary(1,5),
 
     "$v0":decimal_to_binary(2,5),
     "$v1":decimal_to_binary(3,5),
@@ -103,33 +86,60 @@ variables={
     "$t9":decimal_to_binary(25,5),
 
     "$ra":decimal_to_binary(31,5)
-}
+} #registers in mips
 
-for j in range(len(lines)):
-    words=lines[j].split()
-    for i in range(len(words)):
+def beqHelper(target,lineNo): #this function is used to calculate the offset in beq and slt instruction
+    shift=0#checks for empty lines
+    for i in range(lineNo+1,len(lines)):#offset is calculated from next line of beq until the target
+        words=lines[i].split()
+        if(len(words)==0):
+            shift-=1
+        for word in words:
+            if word in pseudoCode.keys():#as psuedo codes may contain more than one instruction
+                shift=shift+len(pseudoCode[word])-1
+            if(word==target):
+                return i-lineNo+shift-1 #final offset value
+
+def jHelper(target): #this is used to calculate the addreses
+    shift = 0 #empty lines
+    for i in range(len(lines)):
+        if len(lines[i])==0:
+            shift-=1
+        words = lines[i].split()
+        for word in words: 
+            if word == "#":
+                break
+            if word in pseudoCode.keys():#psuedo codes may contain more than one instruction
+                shift=shift+len(pseudoCode[word])-1
+            if(word==target):
+                return i+shift #final address
+
+for j in range(len(lines)): #main part of program, checks for the instructions and gives the machine code
+    words=lines[j].split()#splits each line into a list of words
+    for i in range(len(words)):#checks which word starts with the instructions
         if words[i] in instructions:
+            #machine code is written depending on r,i,j format
+            if(words[i]=="#"):
+                break
             if words[i]=="li":
-                var=words[i+1].split(",")
-                data.append(instructions["lui"]+"00000"+variables[var[0]]+decimal_to_binary(0,16))
-
-                data.append(instructions["ori"]+variables[var[0]]+variables[var[0]]+decimal_to_binary(int(var[1]),16))
+                var=words[i+1].split(",")#seperate the required arguements
+                data.append(instructions["addiu"]+"00000"+variables[var[0]]+decimal_to_binary(int(var[1]),16))
 
             if words[i]=="move":
                 var=words[i+1].split(",")
-                data.append(instructions["add"]+variables["$0"]+variables[var[1]]+variables[var[0]]+"00000"+"010000")
+                data.append(instructions["addu"]+variables["$0"]+variables[var[1]]+variables[var[0]]+"00000"+"100001")
 
             if words[i]=="beq":
                 var=words[i+1].split(",")
                 data.append(instructions["beq"]+variables[var[0]]+variables[var[1]]+decimal_to_binary(beqHelper(var[2]+":",j),16))
 
             if words[i]=="mul":
-                data.append(instructions["mult"]+variables[var[0]]+variables[var[1]]+"0000000000011000")
-                data.append(instructions["mflo"]+"0000000000"+variables[var[3]]+"00000010010")
+                var=words[i+1].split(",")
+                data.append(instructions["mul"]+variables[var[1]]+variables[var[2]]+variables[var[0]]+"00000"+"000010")
             
             if words[i]=="add":
                 var=words[i+1].split(",")
-                data.append(instructions["add"]+variables[var[2]]+variables[var[1]]+variables[var[0]]+"00000"+"010000")
+                data.append(instructions["add"]+variables[var[1]]+variables[var[2]]+variables[var[0]]+"00000"+"100000")
 
             if words[i]=="lw":
                 var=words[i+1].split(",")
@@ -144,15 +154,22 @@ for j in range(len(lines)):
                 data.append(instructions["addi"]+variables[var[1]]+variables[var[0]]+decimal_to_binary(int(var[2]),16))
 
             if words[i]=="j":
-                print(words[i+1],jHelper(words[i+1]+":"))
                 data.append(instructions["j"]+decimal_to_binary(instructions_begining+jHelper(words[i+1]+":"),26))
 
             if words[i]=="sub":
                 var=words[i+1].split(",")
-                data.append(instructions["sub"]+variables[var[2]]+variables[var[1]]+variables[var[0]]+"00000"+"100010")
+                data.append(instructions["sub"]+variables[var[1]]+variables[var[2]]+variables[var[0]]+"00000"+"100010")
 
             if words[i]=="bgt":
                 var=words[i+1].split(",")
-                data.append(instructions["bgt"]+variables[var[0]]+variables[var[1]]+decimal_to_binary(beqHelper(var[2]+":",j),16))
+                data.append(instructions["slt"]+variables[var[1]]+variables[var[0]]+variables["$1"]+"00000"+"101010")
+                data.append(instructions["bne"]+variables["$1"]+variables["$0"]+decimal_to_binary(beqHelper(var[2]+":",j),16))
 
-print(data)
+            if words[i]=="subi":
+                var=words[i+1].split(",")
+                data.append(instructions["addi"]+variables["$0"]+variables["$1"]+decimal_to_binary(int(var[2]),16))
+                data.append(instructions["sub"]+variables[var[1]]+variables["$1"]+variables[var[0]]+"00000"+"100010")
+
+with open("output.txt", 'w') as file:
+    for machine in data:
+        file.write(str(machine) + '\n')
