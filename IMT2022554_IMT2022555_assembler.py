@@ -1,6 +1,6 @@
 import os
 
-file_path = "template.asm" #mips code is present here
+file_path = "IMT2022554_IMT2022555_sorting.asm" #mips code is present here
 
 instructions_begining=2**20 #start of addresses in data memory, used for jump statement
 
@@ -170,6 +170,6 @@ for j in range(len(lines)): #main part of program, checks for the instructions a
                 data.append(instructions["addi"]+variables["$0"]+variables["$1"]+decimal_to_binary(int(var[2]),16))
                 data.append(instructions["sub"]+variables[var[1]]+variables["$1"]+variables[var[0]]+"00000"+"100010")
 
-with open("output.txt", 'w') as file:
+with open("IMT2022554_IMT2022555_output.txt", 'w') as file:
     for machine in data:
         file.write(str(machine) + '\n')
