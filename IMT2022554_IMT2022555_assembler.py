@@ -1,6 +1,6 @@
 import os
 
-file_path = "IMT2022554_IMT2022555_sorting.asm" #mips code is present here
+file_path = "IMT2022554_IMT2022555_input.asm" #mips code is present here
 
 instructions_begining=2**20 #start of addresses in data memory, used for jump statement
 
